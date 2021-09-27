@@ -44,7 +44,7 @@ async function getByUserID(req, res) {
             /*
                 loop over each tag in request and create a list memos with a matching tag
                 loop over matching memos and add them to the temp list if they are not already added
-                overwrite mempList with tempList
+                overwrite memoList with tempList
              */
             const tempList = [];
             for (const tag of req.body.tags) {
