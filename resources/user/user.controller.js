@@ -1,10 +1,10 @@
 
 import {query} from "../../lib/db.js";
-import {createToken} from "../../lib/jwt.js";
+import {createToken} from "../../lib/auth.js";
 
 async function login(req, res) {
     const cql = `
-        SELECT * FROM astreet.user WHERE username = ? ALLOW FILTERING;
+        SELECT * FROM astreet.user WHERE username = ?;
     `;
 
     const params = [
@@ -15,8 +15,14 @@ async function login(req, res) {
         const userList = await query(cql, params);
         const user = userList[0];
 
+        if (!user) {
+            return res.status(401).send({
+                message: 'invalid login'
+            });
+        }
+
         if (req.body.password !== user.pass) {
-            return res.send({
+            return res.status(401).send({
                 message: 'invalid login'
             });
         }
@@ -27,6 +33,7 @@ async function login(req, res) {
         });
 
     } catch (error) {
+        console.error(error);
         res.status(500).send({
             message: 'error'
         });
@@ -35,13 +42,13 @@ async function login(req, res) {
 
 async function create(req, res) {
     const cql = `
-        INSERT INTO astreet.user (id, username, pass)
-        VALUES(now(), ?, ?);
+        INSERT INTO astreet.user (id, created_timestamp, username, pass)
+        VALUES(now(), toTimestamp(now()), ?, ?);
     `;
 
     const params = [
         req.body.username,
-        req.body.password
+        req.body.password,
     ]
 
     try {
@@ -50,6 +57,7 @@ async function create(req, res) {
             message: 'created'
         });
     } catch (error) {
+        console.error(error);
         res.status(500).send({
             message: 'error'
         });

@@ -1,15 +1,16 @@
-
 import {query} from "../../lib/db.js";
 
 async function post(req, res) {
     const cql = `
-        INSERT INTO astreet.memo (id, content)
-        VALUES(now(), ?);
+        INSERT INTO astreet.memo_by_user (id, created_timestamp, user_id, content, tags)
+        VALUES (now(), toTimestamp(now()), ?, ?, ?);
     `;
 
     const params = [
-        req.body.content
-    ]
+        req.body.userID,
+        req.body.content,
+        req.body.tags ? req.body.tags : [],
+    ];
 
     try {
         await query(cql, params);
@@ -23,27 +24,58 @@ async function post(req, res) {
     }
 }
 
-async function getAll(req, res) {
+async function getByUserID(req, res) {
     const cql = `
-        SELECT * FROM astreet.memo LIMIT 500;
+        SELECT id, created_timestamp, content, tags
+        FROM astreet.memo_by_user
+        WHERE user_id = ?
+        ;
     `;
-    const params = [];
+
+    const params = [
+        req.body.userID,
+    ];
 
     try {
         let memoList = await query(cql, params);
+
+        if (req.body.tags) {
+
+            /*
+                loop over each tag in request and create a list memos with a matching tag
+                loop over matching memos and add them to the temp list if they are not already added
+                overwrite mempList with tempList
+             */
+            const tempList = [];
+            for (const tag of req.body.tags) {
+                let matchList = memoList.filter(memo => memo.tags.includes(tag));
+                for (let match of matchList) {
+                    const existingMemo = tempList.find(memo => memo.id === match.id);
+                    if (!existingMemo) {
+                        tempList.push(match);
+                    }
+                }
+            }
+
+            memoList = tempList;
+        }
+
         res.send({
             memo_list: memoList
         });
     } catch (error) {
+        console.error(error);
         res.status(500).send({
             message: 'error'
         });
     }
 }
 
-async function getById(req, res) {
+async function getByPostID(req, res) {
     const cql = `
-        SELECT * FROM astreet.memo WHERE id = ?;
+        SELECT *
+        FROM astreet.memo
+        WHERE id = ?;
     `;
 
     const params = [req.params.id];
@@ -69,7 +101,9 @@ async function getById(req, res) {
 
 async function put(req, res) {
     const cql = `
-        UPDATE astreet.memo SET content = ? WHERE id = ?;
+        UPDATE astreet.memo
+        SET content = ?
+        WHERE id = ?;
     `;
 
     const params = [req.body.content, req.params.id];
@@ -94,7 +128,9 @@ async function put(req, res) {
 
 async function del(req, res) {
     const cql = `
-        DELETE FROM astreet.memo WHERE id = ?
+        DELETE
+        FROM astreet.memo
+        WHERE id = ?
     `;
 
     const params = [req.params.id];
@@ -119,8 +155,8 @@ async function del(req, res) {
 
 export default {
     post,
-    getAll,
-    getById,
+    getByPostID,
+    getByUserID,
     put,
     del
 }

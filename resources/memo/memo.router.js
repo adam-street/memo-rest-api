@@ -4,10 +4,10 @@ const router = Router();
 
 router.route('/')
     .post(controller.post)
-    .get(controller.getAll)
+    .get(controller.getByUserID)
 
 router.route('/:id')
-    .get(controller.getById)
+    .get(controller.getByPostID)
     .put(controller.put)
     .delete(controller.del)
 
