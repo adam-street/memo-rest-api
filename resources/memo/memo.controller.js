@@ -3,12 +3,14 @@ import {query} from "../../lib/db.js";
 
 async function post(req, res) {
     const cql = `
-        INSERT INTO astreet.memo (id, content)
-        VALUES(now(), ?);
+        INSERT INTO astreet.memo_by_user (id, create_timestamp, user_id, content, tags)
+        VALUES(now(), toTimestamp(now()), ?, ?, ?);
     `;
 
     const params = [
-        req.body.content
+        req.body.user_id,
+        req.body.content,
+        req.body.tags
     ]
 
     try {
@@ -25,9 +27,11 @@ async function post(req, res) {
 
 async function getAll(req, res) {
     const cql = `
-        SELECT * FROM astreet.memo LIMIT 500;
+        SELECT * FROM astreet.memo_by_user WHERE user_id = ?;
     `;
-    const params = [];
+    const params = [
+        req.body.user_id
+    ];
 
     try {
         let memoList = await query(cql, params);
@@ -43,10 +47,16 @@ async function getAll(req, res) {
 
 async function getById(req, res) {
     const cql = `
-        SELECT * FROM astreet.memo WHERE id = ?;
+        SELECT *
+        FROM astreet.memo_by_user
+        WHERE id = ? AND user_id = ? AND create_timestamp = ?; ;
     `;
 
-    const params = [req.params.id];
+    const params = [
+        req.params.id,
+        req.body.user_id,
+        new Date(req.body.create_timestamp)
+    ];
 
     try {
         let memoList = await query(cql, params);
@@ -59,6 +69,8 @@ async function getById(req, res) {
             res.status(400).send({
                 message: 'invalid id'
             });
+
+            return;
         }
 
         res.status(500).send({
@@ -69,10 +81,17 @@ async function getById(req, res) {
 
 async function put(req, res) {
     const cql = `
-        UPDATE astreet.memo SET content = ? WHERE id = ?;
+        UPDATE astreet.memo_by_user
+        SET content = ?
+        WHERE id = ? AND user_id = ? AND create_timestamp = ?;
     `;
 
-    const params = [req.body.content, req.params.id];
+    const params = [
+        req.body.content,
+        req.params.id,
+        req.body.user_id,
+        new Date(req.body.create_timestamp)
+    ];
 
     try {
         await query(cql, params);
@@ -80,10 +99,13 @@ async function put(req, res) {
             message: 'updated'
         });
     } catch (error) {
+
         if (error.code === 8704) {
             res.status(400).send({
                 message: 'invalid id'
             });
+
+            return;
         }
 
         res.status(500).send({
@@ -94,10 +116,15 @@ async function put(req, res) {
 
 async function del(req, res) {
     const cql = `
-        DELETE FROM astreet.memo WHERE id = ?
+        DELETE FROM astreet.memo_by_user
+        WHERE id = ? AND user_id = ? AND create_timestamp = ?;
     `;
 
-    const params = [req.params.id];
+    const params = [
+        req.params.id,
+        req.body.user_id,
+        new Date(req.body.create_timestamp)
+    ];
 
     try {
         await query(cql, params);
@@ -109,6 +136,8 @@ async function del(req, res) {
             res.status(400).send({
                 message: 'invalid id'
             });
+
+            return;
         }
 
         res.status(500).send({

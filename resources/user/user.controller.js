@@ -4,7 +4,7 @@ import {createToken} from "../../lib/jwt.js";
 
 async function login(req, res) {
     const cql = `
-        SELECT * FROM astreet.user WHERE username = ? ALLOW FILTERING;
+        SELECT * FROM astreet.user WHERE username = ?;
     `;
 
     const params = [
